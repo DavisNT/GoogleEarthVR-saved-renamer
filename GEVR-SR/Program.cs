@@ -2,6 +2,7 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Windows.Forms;
 
 namespace GEVR_SR
 {
@@ -11,20 +12,25 @@ namespace GEVR_SR
         private static readonly byte[] XMPXMLEnd = Encoding.GetEncoding("us-ascii").GetBytes("\" EarthVR:Version=\"1.0\"/>\n  </rdf:RDF>\n</x:xmpmeta>\n");
         private static readonly int XMPHeadersLength = 77;
         private static byte[] FileBytes, GEMetadataDecoded;
-        private static int GEMetadataB64Start, GEMetadataB64Length, XMPBodyLength, XMPBodyLengthPointer, XMPFullLength, XMPFullLengthPointer, OffsetTitle, OffsetSubtitle;
+        private static int GEMetadataB64Start, GEMetadataB64Length, XMPBodyLength, XMPBodyLengthPointer, XMPFullLength, XMPFullLengthPointer, OffsetTitle, OffsetSubtitle, FirstPartLength;
 
         static int Main(string[] args)
         {
-            Console.WriteLine(string.Format("{0} {1}\r\n{2}\r\nhttps://github.com/DavisNT/GoogleEarthVR-saved-renamer\r\n", ((AssemblyProductAttribute)typeof(Program).Assembly.GetCustomAttributes(typeof(AssemblyProductAttribute), false)[0]).Product, typeof(Program).Assembly.GetName().Version.ToString(3), ((AssemblyDescriptionAttribute)typeof(Program).Assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0]).Description));
+            Console.WriteLine(string.Format("{0} {1}\r\n{2}\r\nhttps://github.com/DavisNT/GoogleEarthVR-saved-renamer\r\n", Application.ProductName, typeof(Program).Assembly.GetName().Version.ToString(3), ((AssemblyDescriptionAttribute)typeof(Program).Assembly.GetCustomAttributes(typeof(AssemblyDescriptionAttribute), false)[0]).Description));
             if (args.Length == 0 || args.Length > 3)
             {
-                Console.WriteLine("Usage: gevr-sr file.jpg [title[ subtitle]]");
+                Console.WriteLine("Usage: GEVR-SR file.jpg [title[ subtitle]]");
+                Console.WriteLine("Usage: GEVR-SR /MsgBox file.jpg");
                 Console.WriteLine(string.Format("\r\nThe files might be in: {0}", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Google Earth VR")));
                 return args.Length == 0 ? 0 : 1;
             }
             else
             {
-                var loaded = LoadFileAndDisplayInfo(args[0]);
+                if (args.Length == 2 && ("/msgbox".Equals(args[0], StringComparison.OrdinalIgnoreCase) || "/msgbox".Equals(args[1], StringComparison.OrdinalIgnoreCase)))
+                {
+                    return LoadFileAndDisplayInfo(args["/msgbox".Equals(args[0], StringComparison.OrdinalIgnoreCase) ? 1 : 0], true);
+                }
+                var loaded = LoadFileAndDisplayInfo(args[0], false);
                 if (loaded == 0 && args.Length > 1) {
                     return UpdateInfoAndSaveFile(args[0], args[1], args.Length==3 ? args[2] : null);
                 }
@@ -32,7 +38,7 @@ namespace GEVR_SR
             }
         }
 
-        private static int LoadFileAndDisplayInfo(string fileName)
+        private static int LoadFileAndDisplayInfo(string fileName, bool useMsgBox)
         {
             if (!File.Exists(fileName))
             {
@@ -65,18 +71,34 @@ namespace GEVR_SR
             GEMetadataDecoded = Convert.FromBase64String(Encoding.GetEncoding("us-ascii").GetString(FileBytes, GEMetadataB64Start, GEMetadataB64Length) + new string('=', (4 - GEMetadataB64Length % 4) % 4));
             OffsetTitle = Array.IndexOf(GEMetadataDecoded, (byte)10, 2) + 1;
             OffsetSubtitle = OffsetTitle + GEMetadataDecoded[OffsetTitle] + 2;
+            if (OffsetTitle == 4)
+            {
+                FirstPartLength = (GEMetadataDecoded[1] & 0x7f) + (GEMetadataDecoded[2] << 7);
+            }
+            else
+            {
+                FirstPartLength = GEMetadataDecoded[1];
+            }
 
-            // verification of some pointer
-            if (GEMetadataDecoded[OffsetTitle] + GEMetadataDecoded[OffsetSubtitle] + GEMetadataDecoded[OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 2] + 17 != GEMetadataDecoded[1])
+            // some verifications
+            if (GEMetadataDecoded[OffsetTitle] + GEMetadataDecoded[OffsetSubtitle] + GEMetadataDecoded[OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 2] + 17 != FirstPartLength
+                || (OffsetTitle != 3 && OffsetTitle != 4)
+                || GEMetadataDecoded[OffsetTitle] > 127
+                || GEMetadataDecoded[OffsetSubtitle] > 127
+                || (OffsetTitle == 4 && GEMetadataDecoded[1] < 128))
             {
                 throw new FormatException("Unable to parse Google Earth VR metadata");
             }
 
             // display info
-            Console.WriteLine(string.Format("  Title ({0} bytes): {1}", GEMetadataDecoded[OffsetTitle], Encoding.GetEncoding("utf-8").GetString(GEMetadataDecoded, OffsetTitle + 1, GEMetadataDecoded[OffsetTitle])));
-            Console.WriteLine(string.Format("  Subtitle ({0} bytes): {1}", GEMetadataDecoded[OffsetSubtitle], Encoding.GetEncoding("utf-8").GetString(GEMetadataDecoded, OffsetSubtitle + 1, GEMetadataDecoded[OffsetSubtitle])));
-            Console.WriteLine(string.Format("  Available extra space: {0} bytes", 127 - GEMetadataDecoded[1]));
-            Console.WriteLine(string.Format("  Total space for title and subtitle: {0} bytes", 127 - GEMetadataDecoded[1] + GEMetadataDecoded[OffsetTitle] + GEMetadataDecoded[OffsetSubtitle]));
+            var line1 = string.Format("  Title ({0} bytes): {1}", GEMetadataDecoded[OffsetTitle], Encoding.GetEncoding("utf-8").GetString(GEMetadataDecoded, OffsetTitle + 1, GEMetadataDecoded[OffsetTitle]));
+            var line2 = string.Format("  Subtitle ({0} bytes): {1}", GEMetadataDecoded[OffsetSubtitle], Encoding.GetEncoding("utf-8").GetString(GEMetadataDecoded, OffsetSubtitle + 1, GEMetadataDecoded[OffsetSubtitle]));
+            Console.WriteLine(line1);
+            Console.WriteLine(line2);
+            if (useMsgBox)
+            {
+                MessageBox.Show(string.Format("{0}\r\n{1}", line1, line2), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
 
             return 0;
         }
@@ -104,27 +126,33 @@ namespace GEVR_SR
             Console.WriteLine(string.Format("  New Subtitle ({0} bytes): {1}", newSubtitleBytes.Length, Encoding.GetEncoding("utf-8").GetString(newSubtitleBytes, 0, newSubtitleBytes.Length)));
 
             // length verifications
-            var newFirstPartLength = GEMetadataDecoded[1] - GEMetadataDecoded[OffsetTitle] - GEMetadataDecoded[OffsetSubtitle] + newTitleBytes.Length + newSubtitleBytes.Length;
-            if (newFirstPartLength > 127)
-            {
-                Console.WriteLine(string.Format("ERROR: Not enough space for new title and subtitle ({0} byte(s) insufficient)", newFirstPartLength - 127));
-                return 1;
-            }
+            var newFirstPartLength = FirstPartLength - GEMetadataDecoded[OffsetTitle] - GEMetadataDecoded[OffsetSubtitle] + newTitleBytes.Length + newSubtitleBytes.Length;
             if (newTitleBytes.Length > 127 || newSubtitleBytes.Length > 127)
             {
-                throw new ArgumentException("Title or subtitle longer than 127 bytes");
+                Console.WriteLine("ERROR: Title or subtitle longer than 127 bytes.");
+                return 1;
             }
 
             // concatenate metadata
-            var newGEMetadata = new byte[GEMetadataDecoded.Length - GEMetadataDecoded[OffsetTitle] - GEMetadataDecoded[OffsetSubtitle] + newTitleBytes.Length + newSubtitleBytes.Length];
-            Array.Copy(GEMetadataDecoded, 0, newGEMetadata, 0, OffsetTitle);
-            newGEMetadata[1] = (byte)(newFirstPartLength);
-            newGEMetadata[OffsetTitle] = (byte)newTitleBytes.Length;
-            Array.Copy(newTitleBytes, 0, newGEMetadata, OffsetTitle + 1, newTitleBytes.Length);
-            newGEMetadata[OffsetTitle + newTitleBytes.Length + 1] = (byte)10;
-            newGEMetadata[OffsetTitle + newTitleBytes.Length + 2] = (byte)newSubtitleBytes.Length;
-            Array.Copy(newSubtitleBytes, 0, newGEMetadata, OffsetTitle + newTitleBytes.Length + 3, newSubtitleBytes.Length);
-            Array.Copy(GEMetadataDecoded, OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 1, newGEMetadata, OffsetTitle + newTitleBytes.Length + newSubtitleBytes.Length + 3, GEMetadataDecoded.Length - (OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 1));
+            var newOffsetTitle = newFirstPartLength > 127 ? 4 : 3;
+            var newGEMetadata = new byte[GEMetadataDecoded.Length - GEMetadataDecoded[OffsetTitle] - GEMetadataDecoded[OffsetSubtitle] - OffsetTitle + newTitleBytes.Length + newSubtitleBytes.Length + newOffsetTitle];
+            newGEMetadata[0] = 10;
+            if (newFirstPartLength > 127)
+            {
+                newGEMetadata[1] = (byte)(0x80 | (newFirstPartLength & 0x7f));
+                newGEMetadata[2] = (byte)(newFirstPartLength >> 7);
+            }
+            else
+            {
+                newGEMetadata[1] = (byte)newFirstPartLength;
+            }
+            newGEMetadata[newOffsetTitle - 1] = 10;
+            newGEMetadata[newOffsetTitle] = (byte)newTitleBytes.Length;
+            Array.Copy(newTitleBytes, 0, newGEMetadata, newOffsetTitle + 1, newTitleBytes.Length);
+            newGEMetadata[newOffsetTitle + newTitleBytes.Length + 1] = (byte)10;
+            newGEMetadata[newOffsetTitle + newTitleBytes.Length + 2] = (byte)newSubtitleBytes.Length;
+            Array.Copy(newSubtitleBytes, 0, newGEMetadata, newOffsetTitle + newTitleBytes.Length + 3, newSubtitleBytes.Length);
+            Array.Copy(GEMetadataDecoded, OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 1, newGEMetadata, newOffsetTitle + newTitleBytes.Length + newSubtitleBytes.Length + 3, GEMetadataDecoded.Length - (OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 1));
 
             // encode and trim metadata
             var newGEMetadataB64 = Encoding.GetEncoding("us-ascii").GetBytes(Convert.ToBase64String(newGEMetadata).Replace("=", ""));
