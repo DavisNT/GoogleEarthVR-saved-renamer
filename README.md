@@ -7,6 +7,27 @@ Version 1.0.0
 
 Copyright (c) 2020 Davis Mosenkovs
 
+## Introduction
+
+Google Earth VR allows to save places for later viewing. However it doesn't 
+allow to specify names (titles) of the saved locations.
+
+This tool allows to change title and subtitle of the saved locations by 
+changing metadata in the saved files (located in `Google Earth VR` subfolder 
+inside Pictures folder).
+
+## Usage
+
+The tool can be downloaded (after reading and accepting `LICENSE`) from 
+this GitHub repository (e.g. [Releases](https://github.com/DavisNT/GoogleEarthVR-saved-renamer/releases) 
+section or built from the source by using Visual Studio 2019).
+
+The tool has the following command-line usages:
+* `GEVR-SR file.jpg` - display current title and subtitle.
+* `GEVR-SR file.jpg title` - set title without changing subtitle.
+* `GEVR-SR file.jpg title subtitle` - set title and subtitle.
+* `GEVR-SR /MsgBox file.jpg` - display current title and subtitle in a GUI (MessageBox) window. Console windows sometimes have issues displaying Unicode characters, the `/MsgBox` parameter works around this by displaying a GUI window.
+
 ## Notices
 
 This program is free software: you can redistribute it and/or modify
