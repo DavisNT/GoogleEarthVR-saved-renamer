@@ -5,6 +5,9 @@ image: Visual Studio 2019
 platform: Any CPU
 configuration: Release
 
+before_build:
+  ps: (Get-Content GEVR-SR\Properties\AssemblyInfo.cs) -replace '(AssemblyFileVersion\("\d+\.\d+\.\d+)(\.0)("\))', ('$1.'+$Env:APPVEYOR_BUILD_NUMBER+'$3') | Out-File -Encoding UTF8 GEVR-SR\Properties\AssemblyInfo.cs
+
 build:
   project: GEVR-SR.sln
 
