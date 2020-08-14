@@ -11,5 +11,8 @@ before_build:
 build:
   project: GEVR-SR.sln
 
+after_build:
+  ps: Get-FileHash -Algorithm SHA256 GEVR-SR\bin\$Env:CONFIGURATION\*.* | Format-List
+
 artifacts:
   - path: GEVR-SR\bin\$(configuration)\*.*
