@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -85,7 +86,8 @@ namespace GEVR_SR
                 || (OffsetTitle != 3 && OffsetTitle != 4)
                 || GEMetadataDecoded[OffsetTitle] > 127
                 || GEMetadataDecoded[OffsetSubtitle] > 127
-                || (OffsetTitle == 4 && GEMetadataDecoded[1] < 128))
+                || (OffsetTitle == 4 && GEMetadataDecoded[1] < 128)
+                || FirstPartLength > GEMetadataDecoded.Length - 94)
             {
                 throw new FormatException("Unable to parse Google Earth VR metadata");
             }
@@ -95,6 +97,7 @@ namespace GEVR_SR
             var line2 = string.Format("  Subtitle ({0} bytes): {1}", GEMetadataDecoded[OffsetSubtitle], Encoding.GetEncoding("utf-8").GetString(GEMetadataDecoded, OffsetSubtitle + 1, GEMetadataDecoded[OffsetSubtitle]));
             Console.WriteLine(line1);
             Console.WriteLine(line2);
+            Console.WriteLine(string.Format(new NumberFormatInfo() { NumberDecimalSeparator = "." }, "  Google maps link (of viewpoint): https://www.google.com/maps/search/?api=1&query={0:#.#######},{1:#.#######}", BitConverter.ToDouble(GEMetadataDecoded, GEMetadataDecoded.Length - 92), BitConverter.ToDouble(GEMetadataDecoded, GEMetadataDecoded.Length - 83)));
             if (useMsgBox)
             {
                 MessageBox.Show(string.Format("{0}\r\n{1}", line1, line2), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);

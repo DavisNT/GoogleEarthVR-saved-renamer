@@ -3,7 +3,7 @@ Saved places renamer for Google Earth VR
 [![Build status](https://ci.appveyor.com/api/projects/status/ppcrgpf3v57r9dms?svg=true)](https://ci.appveyor.com/project/DavisNT/googleearthvr-saved-renamer)  
 A quick, dirty and portable tool for renaming saved places in Google Earth VR.
 
-Version 1.0.0
+Version 1.1.0
 
 Copyright (c) 2020 Davis Mosenkovs
 
@@ -23,7 +23,7 @@ this GitHub repository (e.g. [Releases](https://github.com/DavisNT/GoogleEarthVR
 section or built from the source by using Visual Studio 2019).
 
 The tool has the following command-line usages:
-* `GEVR-SR file.jpg` - display current title and subtitle.
+* `GEVR-SR file.jpg` - display current title, subtitle and Google Maps link to viewpoint location.
 * `GEVR-SR file.jpg title` - set title without changing subtitle.
 * `GEVR-SR file.jpg title subtitle` - set title and subtitle.
 * `GEVR-SR /MsgBox file.jpg` - display current title and subtitle in a GUI (MessageBox) window. Console windows sometimes have issues displaying Unicode characters, the `/MsgBox` parameter works around this by displaying a GUI window.
@@ -42,3 +42,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+## More information
+
+More information regarding Google Earth VR saved location file format can be found in: https://github.com/kbogert/kmz2gevr
