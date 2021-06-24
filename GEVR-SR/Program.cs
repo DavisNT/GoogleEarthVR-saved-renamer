@@ -33,7 +33,7 @@ namespace GEVR_SR
                 }
                 var loaded = LoadFileAndDisplayInfo(args[0], false);
                 if (loaded == 0 && args.Length > 1) {
-                    return UpdateInfoAndSaveFile(args[0], args[1], args.Length==3 ? args[2] : null);
+                    return UpdateInfoAndSaveFile(args[0], args[1], args.Length == 3 ? args[2] : null);
                 }
                 return loaded;
             }
@@ -72,21 +72,16 @@ namespace GEVR_SR
             GEMetadataDecoded = Convert.FromBase64String(Encoding.GetEncoding("us-ascii").GetString(FileBytes, GEMetadataB64Start, GEMetadataB64Length) + new string('=', (4 - GEMetadataB64Length % 4) % 4));
             OffsetTitle = Array.IndexOf(GEMetadataDecoded, (byte)10, 2) + 1;
             OffsetSubtitle = OffsetTitle + GEMetadataDecoded[OffsetTitle] + 2;
-            if (OffsetTitle == 4)
-            {
-                FirstPartLength = (GEMetadataDecoded[1] & 0x7f) + (GEMetadataDecoded[2] << 7);
-            }
-            else
-            {
-                FirstPartLength = GEMetadataDecoded[1];
-            }
+            FirstPartLength = Get2ByteInt(GEMetadataDecoded, 1);
 
             // some verifications
-            if (GEMetadataDecoded[OffsetTitle] + GEMetadataDecoded[OffsetSubtitle] + GEMetadataDecoded[OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 2] + 17 != FirstPartLength
+            var CopyrightInfoLength = Get2ByteInt(GEMetadataDecoded, OffsetSubtitle + GEMetadataDecoded[OffsetSubtitle] + 2);
+            if (GEMetadataDecoded[OffsetTitle] + GEMetadataDecoded[OffsetSubtitle] + CopyrightInfoLength + (CopyrightInfoLength > 127 ? 18 : 17) != FirstPartLength
                 || (OffsetTitle != 3 && OffsetTitle != 4)
                 || GEMetadataDecoded[OffsetTitle] > 127
                 || GEMetadataDecoded[OffsetSubtitle] > 127
-                || (OffsetTitle == 4 && GEMetadataDecoded[1] < 128)
+                || OffsetTitle != (GEMetadataDecoded[1] > 127 ? 4 : 3)
+                || OffsetTitle != (FirstPartLength > 127 ? 4 : 3)
                 || FirstPartLength > GEMetadataDecoded.Length - 94)
             {
                 throw new FormatException("Unable to parse Google Earth VR metadata");
@@ -200,6 +195,22 @@ namespace GEVR_SR
                 }
             }
             return -1;
+        }
+
+        private static int Get2ByteInt(byte[] buffer, int offset)
+        {
+            if (buffer[offset] > 127)
+            {
+                if (buffer[offset + 1] > 127)
+                {
+                    throw new FormatException("Variant bigger than 16383");
+                }
+                return (buffer[offset] & 0x7f) + (buffer[offset + 1] << 7);
+            }
+            else
+            {
+                return buffer[offset];
+            }
         }
     }
 }

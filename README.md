@@ -3,9 +3,9 @@ Saved places renamer for Google Earth VR
 [![Build status](https://ci.appveyor.com/api/projects/status/ppcrgpf3v57r9dms?svg=true)](https://ci.appveyor.com/project/DavisNT/googleearthvr-saved-renamer)  
 A quick, dirty and portable tool for renaming saved places in Google Earth VR.
 
-Version 1.1.1
+Version 1.1.2
 
-Copyright (c) 2020 Davis Mosenkovs
+Copyright (c) 2020-2021 Davis Mosenkovs
 
 ## Introduction
 
